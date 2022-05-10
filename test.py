@@ -18,7 +18,7 @@ def draw_motion_vectors(frame, motion_vectors):
 if __name__ == "__main__":
 
     # filename of the video file
-    url = "vid.mp4"
+    url = "rtsp://192.168.0.10:8554/test"
 
     cap = VideoCap()
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         # if there is an error reading the frame
         if not ret:
             print("No frame read. Stopping.")
-            break;
+            continue;
 
         # print results
         print("timestamp: {} | ".format(timestamp), end=" ")

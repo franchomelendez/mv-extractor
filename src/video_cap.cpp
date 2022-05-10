@@ -68,6 +68,7 @@ void VideoCap::release(void) {
 
 
 bool VideoCap::open(const char *url) {
+	av_log_set_level(AV_LOG_DEBUG);
 
     bool valid = false;
     AVStream *st = NULL;
@@ -215,12 +216,17 @@ bool VideoCap::grab(void) {
 
             // wait for the first RTCP sender report containing RTP timestamp <-> NTP walltime mapping,
             // before this no reliable frame timestmap can be computed
+
+                std::cerr << "is rtsp: " << this->is_rtsp << " is synced: " << packet.synced << std::endl;            
+
             if (this->is_rtsp && packet.synced) {
                 // compute absolute UNIX timestamp for each frame as follows (90 kHz clock as in RTP spec):
                 // frame_time_unix = last_rtcp_ntp_time_unix + (timestamp - last_rtcp_timestamp) / 90000
                 struct timeval tv;
                 ntp2tv(&packet.last_rtcp_ntp_time, &tv);
                 double rtp_diff = (double)(packet.timestamp - packet.last_rtcp_timestamp) / 90000.0;
+                std::cerr << "packet timestamp: " << std::fixed << packet.timestamp << std::endl;
+                std::cerr << "packet timestamp: " << std::fixed << packet.pts << std::endl;
                 this->frame_timestamp = (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0 + rtp_diff;
 #ifdef DEBUG
                 std::cerr << "frame_timestamp (UNIX): " << std::fixed << this->frame_timestamp << std::endl;
@@ -230,6 +236,9 @@ bool VideoCap::grab(void) {
             else {
                 auto now = std::chrono::system_clock::now();
                 this->frame_timestamp = std::chrono::duration<double>(now.time_since_epoch()).count();
+#ifdef DEBUG
+                std::cerr << "frame_timestamp (CLOCK): " << std::fixed << this->frame_timestamp << std::endl;
+#endif                
             }
 
             this->frame_number++;
