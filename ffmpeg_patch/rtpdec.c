@@ -181,6 +181,7 @@ static int rtcp_parse_packet(RTPDemuxContext *s, const unsigned char *buf,
 
         switch (buf[1]) {
         case RTCP_SR:
+            av_log(s->ic, AV_LOG_DEBUG, "RTCP SR\n");
             if (payload_len < 20) {
                 av_log(s->ic, AV_LOG_ERROR, "Invalid RTCP SR packet length\n");
                 return AVERROR_INVALIDDATA;
@@ -190,12 +191,16 @@ static int rtcp_parse_packet(RTPDemuxContext *s, const unsigned char *buf,
             s->last_rtcp_ntp_time  = AV_RB64(buf + 8);
             s->last_rtcp_timestamp = AV_RB32(buf + 16);
             if (s->first_rtcp_ntp_time == AV_NOPTS_VALUE) {
+                av_log(s->ic, AV_LOG_ERROR, "FIRST TIME\n");                
                 s->first_rtcp_ntp_time = s->last_rtcp_ntp_time;
                 if (!s->base_timestamp)
                     s->base_timestamp = s->last_rtcp_timestamp;
                 s->rtcp_ts_offset = (int32_t)(s->last_rtcp_timestamp - s->base_timestamp);
             }
-
+            av_log(s->ic, AV_LOG_ERROR, "Reception %jd\n",s->last_rtcp_reception_time );
+            av_log(s->ic, AV_LOG_ERROR, "NTP Time %ju\n", s->last_rtcp_ntp_time);
+            av_log(s->ic, AV_LOG_ERROR, "RTCP TS %ju\n", s->last_rtcp_timestamp);
+            av_log(s->ic, AV_LOG_ERROR, "RTCP TS offset %jd\n", s->rtcp_ts_offset);
             break;
         case RTCP_BYE:
             return -RTCP_BYE;
@@ -596,13 +601,22 @@ static void finalize_packet(RTPDemuxContext *s, AVPacket *pkt, uint32_t timestam
     bool synced = false;
 
     if (pkt->pts != AV_NOPTS_VALUE || pkt->dts != AV_NOPTS_VALUE)
+    {
+      	av_log(NULL, AV_LOG_DEBUG, "pkt-pts has value\n");
+   
         return; /* Timestamp already set by depacketizer */
+    }
     if (timestamp == RTP_NOTS_VALUE)
+    {
+        av_log(NULL, AV_LOG_DEBUG, "timstamp has no value  value\n");
         return;
+    }
 
     if (s->last_rtcp_ntp_time != AV_NOPTS_VALUE && s->ic->nb_streams > 1) {
         int64_t addend;
         int delta_timestamp;
+
+        av_log(NULL, AV_LOG_DEBUG, "timestamp %lu\n", timestamp);
 
         /* compute pts from timestamp with received ntp_time */
         delta_timestamp = timestamp - s->last_rtcp_timestamp;
@@ -612,6 +626,21 @@ static void finalize_packet(RTPDemuxContext *s, AVPacket *pkt, uint32_t timestam
                             (uint64_t) s->st->time_base.num << 32);
         pkt->pts = s->range_start_offset + s->rtcp_ts_offset + addend +
                    delta_timestamp;
+
+    /* export private data (timestamps) into AVPacket */
+    if (s->last_rtcp_ntp_time != AV_NOPTS_VALUE && s->last_rtcp_timestamp) {
+        synced = true;
+	    pkt->last_rtcp_ntp_time = s->last_rtcp_ntp_time;
+        pkt->last_rtcp_timestamp = s->last_rtcp_timestamp;
+    }
+    else {
+        pkt->last_rtcp_ntp_time = 0;
+        pkt->last_rtcp_timestamp = 0;
+    }
+
+    pkt->seq = s->seq;
+    pkt->timestamp = s->timestamp;
+    pkt->synced = synced;
         return;
     }
 
@@ -630,7 +659,7 @@ static void finalize_packet(RTPDemuxContext *s, AVPacket *pkt, uint32_t timestam
     /* export private data (timestamps) into AVPacket */
     if (s->last_rtcp_ntp_time != AV_NOPTS_VALUE && s->last_rtcp_timestamp) {
         synced = true;
-	pkt->last_rtcp_ntp_time = s->last_rtcp_ntp_time;
+	    pkt->last_rtcp_ntp_time = s->last_rtcp_ntp_time;
         pkt->last_rtcp_timestamp = s->last_rtcp_timestamp;
     }
     else {
