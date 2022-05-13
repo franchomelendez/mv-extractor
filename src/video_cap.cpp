@@ -226,7 +226,7 @@ bool VideoCap::grab(void) {
                 ntp2tv(&packet.last_rtcp_ntp_time, &tv);
                 double rtp_diff = (double)(packet.timestamp - packet.last_rtcp_timestamp) / 90000.0;
                 std::cerr << "packet timestamp: " << std::fixed << packet.timestamp << std::endl;
-                std::cerr << "packet timestamp: " << std::fixed << packet.pts << std::endl;
+                std::cerr << "Presentation TS: " << std::fixed << packet.pts << std::endl;
                 this->frame_timestamp = (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0 + rtp_diff;
 #ifdef DEBUG
                 std::cerr << "frame_timestamp (UNIX): " << std::fixed << this->frame_timestamp << std::endl;

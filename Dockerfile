@@ -48,6 +48,9 @@ RUN apt-get update && \
     liblzma-dev && \
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && \
+  apt-get -y install vim
+
 # copy libraries
 WORKDIR /usr/local/lib
 COPY --from=builder /usr/local/lib .

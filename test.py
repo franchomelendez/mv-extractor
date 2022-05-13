@@ -18,7 +18,7 @@ def draw_motion_vectors(frame, motion_vectors):
 if __name__ == "__main__":
 
     # filename of the video file
-    url = "rtsp://192.168.0.10:8554/test"
+    url = "rtsp://admin:@10.130.11.145:554//h265Preview_01_main"
 
     cap = VideoCap()
 
